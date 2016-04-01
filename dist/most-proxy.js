@@ -586,8 +586,15 @@ process.umask = function() { return 0; };
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.Source = undefined;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _defaultScheduler = require('most/lib/scheduler/defaultScheduler');
+
+var _defaultScheduler2 = _interopRequireDefault(_defaultScheduler);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -596,7 +603,8 @@ var Source = function () {
     _classCallCheck(this, Source);
 
     this.sink = void 0;
-    this.active = true;
+    this.active = false;
+    this.source = void 0;
     this.disposable = void 0;
   }
 
@@ -604,7 +612,10 @@ var Source = function () {
     key: 'run',
     value: function run(sink, scheduler) {
       this.sink = sink;
-      this.scheduler = scheduler;
+      this.active = true;
+      if (this.source !== void 0) {
+        this.disposable = this.source.run(sink, scheduler);
+      }
       return this;
     }
   }, {
@@ -615,13 +626,16 @@ var Source = function () {
     }
   }, {
     key: 'add',
-    value: function add(disposable) {
-      if (!this.active || !this.disposable) {
-        this.disposable = disposable;
+    value: function add(source) {
+      if (this.active) {
+        this.source = source;
+        this.disposable = source.run(this.sink, _defaultScheduler2.default);
+      } else if (!this.source) {
+        this.source = source;
         return;
+      } else {
+        throw new Error('Can only imitate one stream');
       }
-      disposable.dispose();
-      throw new Error('Can only imitate one stream');
     }
   }, {
     key: 'event',
@@ -670,7 +684,7 @@ var Source = function () {
 
 exports.Source = Source;
 
-},{}],9:[function(require,module,exports){
+},{"most/lib/scheduler/defaultScheduler":4}],9:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -681,13 +695,7 @@ exports.proxy = undefined;
 
 var _most = (typeof window !== "undefined" ? window['most'] : typeof global !== "undefined" ? global['most'] : null);
 
-var _defaultScheduler = require('most/lib/scheduler/defaultScheduler');
-
-var _defaultScheduler2 = _interopRequireDefault(_defaultScheduler);
-
 var _Source = require('./Source');
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /**
  * @method proxy
@@ -705,7 +713,7 @@ function proxy() {
   var source = new _Source.Source();
   var stream = new _most.Stream(source);
   var fn = function fn(origin) {
-    return source.add(origin.source.run(source, _defaultScheduler2.default));
+    return source.add(origin.source);
   };
   return [fn, stream];
 }
@@ -713,5 +721,5 @@ function proxy() {
 exports.proxy = proxy;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Source":8,"most/lib/scheduler/defaultScheduler":4}]},{},[9])(9)
+},{"./Source":8}]},{},[9])(9)
 });
