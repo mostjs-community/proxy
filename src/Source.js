@@ -1,13 +1,19 @@
+import defaultScheduler from 'most/lib/scheduler/defaultScheduler'
+
 class Source {
   constructor() {
     this.sink = void 0
-    this.active = true
+    this.active = false
+    this.source = void 0
     this.disposable = void 0
   }
 
   run(sink, scheduler) {
     this.sink = sink
-    this.scheduler = scheduler
+    this.active = true
+    if (this.source !== void 0) {
+      this.disposable = this.source.run(sink, scheduler)
+    }
     return this
   }
 
@@ -16,13 +22,16 @@ class Source {
     this.disposable.dispose()
   }
 
-  add(disposable) {
-    if (!this.active || !this.disposable) {
-      this.disposable = disposable
+  add(source) {
+    if (this.active) {
+      this.source = source
+      this.disposable = source.run(this.sink, defaultScheduler)
+    } else if (!this.source) {
+      this.source = source
       return
+    } else {
+      throw new Error('Can only imitate one stream')
     }
-    disposable.dispose()
-    throw new Error('Can only imitate one stream')
   }
 
   event(t, x) {

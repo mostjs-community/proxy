@@ -1,6 +1,4 @@
 import {Stream} from 'most'
-import scheduler from 'most/lib/scheduler/defaultScheduler'
-
 import {Source} from './Source'
 
 /**
@@ -18,7 +16,7 @@ import {Source} from './Source'
 function proxy() {
   const source = new Source()
   const stream = new Stream(source)
-  const fn = origin => source.add(origin.source.run(source, scheduler))
+  const fn = origin => source.add(origin.source)
   return [fn, stream]
 }
 
