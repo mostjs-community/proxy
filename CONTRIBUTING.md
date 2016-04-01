@@ -1,0 +1,1 @@
+We'd highly appreciate your contribution to our source code to make this even better. This library follows these [contributing guidlines](https://github.com/motorcyclejs/motorcycle/blob/master/CONTRIBUTING.md)

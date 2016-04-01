@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>  | Documentation</title>
+  <meta name='viewport' content='width=device-width,initial-scale=1'>
+  <link href='assets/bass.css' type='text/css' rel='stylesheet' />
+  <link href='assets/style.css' type='text/css' rel='stylesheet' />
+  <link href='assets/github.css' type='text/css' rel='stylesheet' />
+</head>
+<body class='documentation'>
+  <div class='container'>
+    <div class='clearfix md-mxn2'>
+      <div class='fixed md-show fix-3 overflow-auto max-height-100'>
+        <div class='py1 px2'>
+          <h3 class='mb0 no-anchor'></h3>
+          <div class='mb1'><code></code></div>
+          <input
+            placeholder='Filter'
+            id='filter-input'
+            class='col12 block field'
+            type='text' />
+          <div id='toc'>
+              <a
+                href='#proxy'
+                class='block bold'>
+                proxy
+              </a>
+          </div>
+        </div>
+      </div>
+      <div class='fix-margin-3'>
+        <div class='px2'>
+<div class='py1'><section class='py2 clearfix'>
+  <h2 id='proxy' class='mt0'>
+    proxy<span class='gray'></span>
+  </h2>
+  
+  
+  
+  
+  
+  
+      <h4>Returns</h4>
+      <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array">Array</a>
+</code>
+      :
+      <div class='force-inline'>
+        <p>[attach, stream] - array containing an 'attach' type
+function at index 0 and a most.Stream at index 1. Useful when combined with
+destructuring.</p>
+
+      </div>
+    <h4>Examples</h4>
+
+    <pre class='overflow-auto'><span class="hljs-keyword">import</span> {proxy} <span class="hljs-keyword">from</span> <span class="hljs-string">'most-proxy'</span>
+
+<span class="hljs-keyword">const</span> [attach, stream] = proxy()
+
+<span class="hljs-keyword">const</span> [imitate, actionProxy$] = proxy()</pre>
+</section>
+</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src='assets/anchor.js'></script>
+  <script src='assets/site.js'></script>
+</body>
+</html>
