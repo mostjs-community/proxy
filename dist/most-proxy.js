@@ -691,7 +691,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /**
  * @method proxy
- * @returns {Array} [fn, stream]
+ * @returns {Array} [attach, stream] - array containing an 'attach' type
+ * function at index 0 and a most.Stream at index 1. Useful when combined with
+ * destructuring.
+ * @example
+ * import {proxy} from 'most-proxy'
+ *
+ * const [attach, stream] = proxy()
+ *
+ * const [imitate, actionProxy$] = proxy()
  */
 function proxy() {
   var source = new _Source.Source();
