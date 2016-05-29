@@ -1,171 +1,374 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.mostProxy = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/** @license MIT License (c) copyright 2010-2016 original author or authors */
-/** @author Brian Cavalier */
-/** @author John Hann */
+(function (global){
+"use strict";
 
-exports.noop = noop;
-exports.identity = identity;
-exports.compose = compose;
-exports.apply = apply;
-
-exports.cons = cons;
-exports.append = append;
-exports.drop = drop;
-exports.tail = tail;
-exports.copy = copy;
-exports.map = map;
-exports.reduce = reduce;
-exports.replace = replace;
-exports.remove = remove;
-exports.removeAll = removeAll;
-exports.findIndex = findIndex;
-exports.isArrayLike = isArrayLike;
-
-function noop() {}
-
-function identity(x) {
-	return x;
+var most_1 = (typeof window !== "undefined" ? window['most'] : typeof global !== "undefined" ? global['most'] : null);
+var defaultScheduler = require('most/lib/scheduler/defaultScheduler');
+/**
+ * Create a proxy stream and a function to attach to a yet to exist stream
+ * @example
+ * import {proxy} from 'most-proxy'
+ * const {attach, stream} = proxy()
+ *
+ * stream.map(f)
+ *
+ * attach(otherStream)
+ */
+function proxy() {
+    var source = new ProxySource();
+    var stream = new most_1.Stream(source);
+    function attach(origin) {
+        source.add(origin.source);
+        return origin;
+    }
+    return { attach: attach, stream: stream };
 }
+exports.proxy = proxy;
+var ProxySource = function () {
+    function ProxySource() {
+        this.sink = void 0;
+        this.active = false;
+        this.source = void 0;
+        this.disposable = void 0;
+    }
+    ProxySource.prototype.run = function (sink, scheduler) {
+        this.sink = sink;
+        this.active = true;
+        if (this.source !== void 0) {
+            this.disposable = this.source.run(sink, scheduler);
+        }
+        return this;
+    };
+    ProxySource.prototype.dispose = function () {
+        this.active = false;
+        this.disposable.dispose();
+    };
+    ProxySource.prototype.add = function (source) {
+        if (this.active) {
+            this.source = source;
+            this.disposable = source.run(this.sink, defaultScheduler);
+        } else if (!this.source) {
+            this.source = source;
+            return;
+        } else {
+            throw new Error('Can only imitate one stream');
+        }
+    };
+    ProxySource.prototype.event = function (t, x) {
+        if (this.sink === void 0) {
+            return;
+        }
+        this.ensureActive();
+        this.sink.event(t, x);
+    };
+    ProxySource.prototype.end = function (t, x) {
+        this.propagateAndDisable(this.sink.end, t, x);
+    };
+    ProxySource.prototype.error = function (t, e) {
+        this.propagateAndDisable(this.sink.error, t, e);
+    };
+    ProxySource.prototype.propagateAndDisable = function (method, t, x) {
+        if (this.sink === void 0) {
+            return;
+        }
+        this.ensureActive();
+        this.active = false;
+        var sink = this.sink;
+        this.sink = void 0;
+        method.call(sink, t, x);
+    };
+    ProxySource.prototype.ensureActive = function () {
+        if (!this.active) {
+            throw new Error('stream ended');
+        }
+    };
+    return ProxySource;
+}();
 
-function compose(f, g) {
-	return function(x) {
-		return f(g(x));
-	};
-}
 
-function apply(f, x) {
-	return f(x);
-}
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"most/lib/scheduler/defaultScheduler":5}],2:[function(require,module,exports){
+(function (global, factory) {
+  if (typeof define === "function" && define.amd) {
+    define('@most/prelude', ['exports'], factory);
+  } else if (typeof exports !== "undefined") {
+    factory(exports);
+  } else {
+    var mod = {
+      exports: {}
+    };
+    factory(mod.exports);
+    global.mostPrelude = mod.exports;
+  }
+})(this, function (exports) {
+  'use strict';
 
-function cons(x, array) {
-	var l = array.length;
-	var a = new Array(l + 1);
-	a[0] = x;
-	for(var i=0; i<l; ++i) {
-		a[i + 1] = array[i];
-	}
-	return a;
-}
+  Object.defineProperty(exports, "__esModule", {
+    value: true
+  });
+  /** @license MIT License (c) copyright 2010-2016 original author or authors */
 
-function append(x, a) {
-	var l = a.length;
-	var b = new Array(l+1);
-	for(var i=0; i<l; ++i) {
-		b[i] = a[i];
-	}
+  // Non-mutating array operations
 
-	b[l] = x;
-	return b;
-}
+  // cons :: a -> [a] -> [a]
+  // a with x prepended
+  function cons(x, a) {
+    var l = a.length;
+    var b = new Array(l + 1);
+    b[0] = x;
+    for (var i = 0; i < l; ++i) {
+      b[i + 1] = a[i];
+    }
+    return b;
+  }
 
-function drop(n, array) {
-	var l = array.length;
-	if(n >= l) {
-		return [];
-	}
+  // append :: a -> [a] -> [a]
+  // a with x appended
+  function append(x, a) {
+    var l = a.length;
+    var b = new Array(l + 1);
+    for (var i = 0; i < l; ++i) {
+      b[i] = a[i];
+    }
 
-	l -= n;
-	var a = new Array(l);
-	for(var i=0; i<l; ++i) {
-		a[i] = array[n+i];
-	}
-	return a;
-}
+    b[l] = x;
+    return b;
+  }
 
-function tail(array) {
-	return drop(1, array);
-}
+  // drop :: Int -> [a] -> [a]
+  // drop first n elements
+  function drop(n, a) {
+    // eslint-disable-line complexity
+    if (n < 0) {
+      throw new TypeError('n must be >= 0');
+    }
 
-function copy(array) {
-	var l = array.length;
-	var a = new Array(l);
-	for(var i=0; i<l; ++i) {
-		a[i] = array[i];
-	}
-	return a;
-}
+    var l = a.length;
+    if (n === 0 || l === 0) {
+      return a;
+    }
 
-function map(f, array) {
-	var l = array.length;
-	var a = new Array(l);
-	for(var i=0; i<l; ++i) {
-		a[i] = f(array[i]);
-	}
-	return a;
-}
+    if (n >= l) {
+      return [];
+    }
 
-function reduce(f, z, array) {
-	var r = z;
-	for(var i=0, l=array.length; i<l; ++i) {
-		r = f(r, array[i], i);
-	}
-	return r;
-}
+    return unsafeDrop(n, a, l - n);
+  }
 
-function replace(x, i, array) {
-	var l = array.length;
-	var a = new Array(l);
-	for(var j=0; j<l; ++j) {
-		a[j] = i === j ? x : array[j];
-	}
-	return a;
-}
+  // unsafeDrop :: Int -> [a] -> Int -> [a]
+  // Internal helper for drop
+  function unsafeDrop(n, a, l) {
+    var b = new Array(l);
+    for (var i = 0; i < l; ++i) {
+      b[i] = a[n + i];
+    }
+    return b;
+  }
 
-function remove(index, array) {
-	var l = array.length;
-	if(l === 0 || index >= array) { // exit early if index beyond end of array
-		return array;
-	}
+  // tail :: [a] -> [a]
+  // drop head element
+  function tail(a) {
+    return drop(1, a);
+  }
 
-	if(l === 1) { // exit early if index in bounds and length === 1
-		return [];
-	}
+  // copy :: [a] -> [a]
+  // duplicate a (shallow duplication)
+  function copy(a) {
+    var l = a.length;
+    var b = new Array(l);
+    for (var i = 0; i < l; ++i) {
+      b[i] = a[i];
+    }
+    return b;
+  }
 
-	return unsafeRemove(index, array, l-1);
-}
+  // map :: (a -> b) -> [a] -> [b]
+  // transform each element with f
+  function map(f, a) {
+    var l = a.length;
+    var b = new Array(l);
+    for (var i = 0; i < l; ++i) {
+      b[i] = f(a[i]);
+    }
+    return b;
+  }
 
-function unsafeRemove(index, a, l) {
-	var b = new Array(l);
-	var i;
-	for(i=0; i<index; ++i) {
-		b[i] = a[i];
-	}
-	for(i=index; i<l; ++i) {
-		b[i] = a[i+1];
-	}
+  // reduce :: (a -> b -> a) -> a -> [b] -> a
+  // accumulate via left-fold
+  function reduce(f, z, a) {
+    var r = z;
+    for (var i = 0, l = a.length; i < l; ++i) {
+      r = f(r, a[i], i);
+    }
+    return r;
+  }
 
-	return b;
-}
+  // replace :: a -> Int -> [a]
+  // replace element at index
+  function replace(x, i, a) {
+    // eslint-disable-line complexity
+    if (i < 0) {
+      throw new TypeError('i must be >= 0');
+    }
 
-function removeAll(f, a) {
-	var l = a.length;
-	var b = new Array(l);
-	for(var x, i=0, j=0; i<l; ++i) {
-		x = a[i];
-		if(!f(x)) {
-			b[j] = x;
-			++j;
-		}
-	}
+    var l = a.length;
+    var b = new Array(l);
+    for (var j = 0; j < l; ++j) {
+      b[j] = i === j ? x : a[j];
+    }
+    return b;
+  }
 
-	b.length = j;
-	return b;
-}
+  // remove :: Int -> [a] -> [a]
+  // remove element at index
+  function remove(i, a) {
+    // eslint-disable-line complexity
+    if (i < 0) {
+      throw new TypeError('i must be >= 0');
+    }
 
-function findIndex(x, a) {
-	for (var i = 0, l = a.length; i < l; ++i) {
-		if (x === a[i]) {
-			return i;
-		}
-	}
-	return -1;
-}
+    var l = a.length;
+    if (l === 0 || i >= l) {
+      // exit early if index beyond end of array
+      return a;
+    }
 
-function isArrayLike(x){
-   return x != null && typeof x.length === 'number' && typeof x !== 'function';
-}
+    if (l === 1) {
+      // exit early if index in bounds and length === 1
+      return [];
+    }
 
-},{}],2:[function(require,module,exports){
+    return unsafeRemove(i, a, l - 1);
+  }
+
+  // unsafeRemove :: Int -> [a] -> Int -> [a]
+  // Internal helper to remove element at index
+  function unsafeRemove(i, a, l) {
+    var b = new Array(l);
+    var j = undefined;
+    for (j = 0; j < i; ++j) {
+      b[j] = a[j];
+    }
+    for (j = i; j < l; ++j) {
+      b[j] = a[j + 1];
+    }
+
+    return b;
+  }
+
+  // removeAll :: (a -> boolean) -> [a] -> [a]
+  // remove all elements matching a predicate
+  function removeAll(f, a) {
+    var l = a.length;
+    var b = new Array(l);
+    var j = 0;
+    for (var x, i = 0; i < l; ++i) {
+      x = a[i];
+      if (!f(x)) {
+        b[j] = x;
+        ++j;
+      }
+    }
+
+    b.length = j;
+    return b;
+  }
+
+  // findIndex :: a -> [a] -> Int
+  // find index of x in a, from the left
+  function findIndex(x, a) {
+    for (var i = 0, l = a.length; i < l; ++i) {
+      if (x === a[i]) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // isArrayLike :: * -> boolean
+  // Return true iff x is array-like
+  function isArrayLike(x) {
+    return x != null && typeof x.length === 'number' && typeof x !== 'function';
+  }
+
+  /** @license MIT License (c) copyright 2010-2016 original author or authors */
+
+  // id :: a -> a
+  var id = function id(x) {
+    return x;
+  };
+
+  // compose :: (b -> c) -> (a -> b) -> (a -> c)
+  var compose = function compose(f, g) {
+    return function (x) {
+      return f(g(x));
+    };
+  };
+
+  // apply :: (a -> b) -> a -> b
+  var apply = function apply(f, x) {
+    return f(x);
+  };
+
+  // curry2 :: ((a, b) -> c) -> (a -> b -> c)
+  function curry2(f) {
+    function curried(a, b) {
+      switch (arguments.length) {
+        case 0:
+          return curried;
+        case 1:
+          return function (b) {
+            return f(a, b);
+          };
+        default:
+          return f(a, b);
+      }
+    }
+    return curried;
+  }
+
+  // curry3 :: ((a, b, c) -> d) -> (a -> b -> c -> d)
+  function curry3(f) {
+    function curried(a, b, c) {
+      // eslint-disable-line complexity
+      switch (arguments.length) {
+        case 0:
+          return curried;
+        case 1:
+          return curry2(function (b, c) {
+            return f(a, b, c);
+          });
+        case 2:
+          return function (c) {
+            return f(a, b, c);
+          };
+        default:
+          return f(a, b, c);
+      }
+    }
+    return curried;
+  }
+
+  exports.cons = cons;
+  exports.append = append;
+  exports.drop = drop;
+  exports.tail = tail;
+  exports.copy = copy;
+  exports.map = map;
+  exports.reduce = reduce;
+  exports.replace = replace;
+  exports.remove = remove;
+  exports.removeAll = removeAll;
+  exports.findIndex = findIndex;
+  exports.isArrayLike = isArrayLike;
+  exports.id = id;
+  exports.compose = compose;
+  exports.apply = apply;
+  exports.curry2 = curry2;
+  exports.curry3 = curry3;
+});
+
+},{}],3:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
@@ -184,12 +387,12 @@ function runTask(task) {
 	}
 }
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
 
-var base = require('./../base');
+var base = require('@most/prelude');
 
 module.exports = Scheduler;
 
@@ -209,7 +412,7 @@ ScheduledTask.prototype.error = function(e) {
 	return this.task.error(this.time, e);
 };
 
-ScheduledTask.prototype.cancel = function() {
+ScheduledTask.prototype.dispose = function() {
 	this.scheduler.cancel(this);
 	return this.task.dispose();
 };
@@ -408,7 +611,7 @@ function newTimeslot(t, events) {
 	return { time: t, events: events };
 }
 
-},{"./../base":1}],4:[function(require,module,exports){
+},{"@most/prelude":2}],5:[function(require,module,exports){
 (function (process){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
@@ -424,7 +627,7 @@ var isNode = typeof process === 'object'
 module.exports = new Scheduler(isNode ? nodeTimer : setTimeoutTimer);
 
 }).call(this,require('_process'))
-},{"./Scheduler":3,"./nodeTimer":5,"./timeoutTimer":6,"_process":7}],5:[function(require,module,exports){
+},{"./Scheduler":4,"./nodeTimer":6,"./timeoutTimer":7,"_process":8}],6:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
@@ -470,7 +673,7 @@ module.exports = {
 	}
 };
 
-},{"../defer":2}],6:[function(require,module,exports){
+},{"../defer":3}],7:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
@@ -487,7 +690,7 @@ module.exports = {
 	}
 };
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -497,6 +700,9 @@ var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -580,146 +786,5 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],8:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Source = undefined;
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _defaultScheduler = require('most/lib/scheduler/defaultScheduler');
-
-var _defaultScheduler2 = _interopRequireDefault(_defaultScheduler);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Source = function () {
-  function Source() {
-    _classCallCheck(this, Source);
-
-    this.sink = void 0;
-    this.active = false;
-    this.source = void 0;
-    this.disposable = void 0;
-  }
-
-  _createClass(Source, [{
-    key: 'run',
-    value: function run(sink, scheduler) {
-      this.sink = sink;
-      this.active = true;
-      if (this.source !== void 0) {
-        this.disposable = this.source.run(sink, scheduler);
-      }
-      return this;
-    }
-  }, {
-    key: 'dispose',
-    value: function dispose() {
-      this.active = false;
-      this.disposable.dispose();
-    }
-  }, {
-    key: 'add',
-    value: function add(source) {
-      if (this.active) {
-        this.source = source;
-        this.disposable = source.run(this.sink, _defaultScheduler2.default);
-      } else if (!this.source) {
-        this.source = source;
-        return;
-      } else {
-        throw new Error('Can only imitate one stream');
-      }
-    }
-  }, {
-    key: 'event',
-    value: function event(t, x) {
-      if (this.sink === void 0) {
-        return;
-      }
-      this.ensureActive();
-      this.sink.event(t, x);
-    }
-  }, {
-    key: 'end',
-    value: function end(t, x) {
-      this.propagateAndDisable(this.sink.end, t, x);
-    }
-  }, {
-    key: 'error',
-    value: function error(t, e) {
-      this.propagateAndDisable(this.sink.error, t, e);
-    }
-  }, {
-    key: 'propagateAndDisable',
-    value: function propagateAndDisable(method, t, x) {
-      if (this.sink === void 0) {
-        return;
-      }
-      this.ensureActive();
-
-      this.active = false;
-      var sink = this.sink;
-      this.sink = void 0;
-
-      method.call(sink, t, x);
-    }
-  }, {
-    key: 'ensureActive',
-    value: function ensureActive() {
-      if (!this.active) {
-        throw new Error('stream ended');
-      }
-    }
-  }]);
-
-  return Source;
-}();
-
-exports.Source = Source;
-
-},{"most/lib/scheduler/defaultScheduler":4}],9:[function(require,module,exports){
-(function (global){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.proxy = undefined;
-
-var _most = (typeof window !== "undefined" ? window['most'] : typeof global !== "undefined" ? global['most'] : null);
-
-var _Source = require('./Source');
-
-/**
- * @method proxy
- * @returns {Array} [attach, stream] - array containing an 'attach' type
- * function at index 0 and a most.Stream at index 1. Useful when combined with
- * destructuring.
- * @example
- * import {proxy} from 'most-proxy'
- *
- * const [attach, stream] = proxy()
- *
- * const [imitate, actionProxy$] = proxy()
- */
-function proxy() {
-  var source = new _Source.Source();
-  var stream = new _most.Stream(source);
-  var fn = function fn(origin) {
-    return source.add(origin.source);
-  };
-  return [fn, stream];
-}
-
-exports.proxy = proxy;
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./Source":8}]},{},[9])(9)
+},{}]},{},[1])(1)
 });
