@@ -9,7 +9,7 @@ $ npm install --save most-proxy
 
 ## API Documentation
 
-Documentation can be found [here](https://tylors.github.io/most-proxy/docs)
+Documentation can be found [here](https://tylors.github.io/most-proxy/doc)
 
 ## Example
 
