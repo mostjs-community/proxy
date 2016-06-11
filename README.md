@@ -27,7 +27,7 @@ const {attach, stream} = proxy()
 stream.take(3).observe(x => console.log(x)) // 1, 2, 3
 
 // here we create the stream we want to use as the circular dependency
-const original = periodic(100).scan((x, y) => x + y, 0)
+const original = periodic(100, 1).scan((x, y) => x + y, 0)
 
 // pipe events from original to proxy stream
 attach(original)
