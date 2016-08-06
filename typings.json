@@ -1,5 +1,7 @@
 {
-  "name": "most-subject",
-  "dependencies": {
+  "name": "most-proxy",
+  "dependencies": {},
+  "globalDependencies": {
+    "es2015-promise": "registry:env/es2015-promise#1.0.0+20160526151700"
   }
 }

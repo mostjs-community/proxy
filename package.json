@@ -73,6 +73,6 @@
     "validate-commit-msg": "^2.6.1"
   },
   "peerDependencies": {
-    "most": "^0.19.7"
+    "most": "^1.0.0"
   }
 }
