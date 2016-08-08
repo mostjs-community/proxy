@@ -87,7 +87,7 @@ var ProxySource = function () {
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"most/lib/scheduler/defaultScheduler":5}],2:[function(require,module,exports){
+},{"most/lib/scheduler/defaultScheduler":7}],2:[function(require,module,exports){
 (function (global, factory) {
   if (typeof define === "function" && define.amd) {
     define('@most/prelude', ['exports'], factory);
@@ -245,7 +245,7 @@ var ProxySource = function () {
   // Internal helper to remove element at index
   function unsafeRemove(i, a, l) {
     var b = new Array(l);
-    var j = undefined;
+    var j = void 0;
     for (j = 0; j < i; ++j) {
       b[j] = a[j];
     }
@@ -373,28 +373,53 @@ var ProxySource = function () {
 /** @author Brian Cavalier */
 /** @author John Hann */
 
-module.exports = defer;
+var defer = require('../task').defer;
 
-function defer(task) {
-	return Promise.resolve(task).then(runTask);
+/*global setTimeout, clearTimeout*/
+
+module.exports = ClockTimer;
+
+function ClockTimer() {}
+
+ClockTimer.prototype.now = Date.now;
+
+ClockTimer.prototype.setTimer = function(f, dt) {
+	return dt <= 0 ? runAsap(f) : setTimeout(f, dt);
+};
+
+ClockTimer.prototype.clearTimer = function(t) {
+	return t instanceof Asap ? t.cancel() : clearTimeout(t);
+};
+
+function Asap(f) {
+	this.f = f;
+	this.active = true;
 }
 
-function runTask(task) {
-	try {
-		return task.run();
-	} catch(e) {
-		return task.error(e);
-	}
+Asap.prototype.run = function() {
+	return this.active && this.f();
+};
+
+Asap.prototype.error = function(e) {
+	throw e;
+};
+
+Asap.prototype.cancel = function() {
+	this.active = false;
+};
+
+function runAsap(f) {
+	var task = new Asap(f);
+	defer(task);
+	return task;
 }
 
-},{}],4:[function(require,module,exports){
+},{"../task":8}],4:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
 
-var base = require('@most/prelude');
-
-module.exports = Scheduler;
+module.exports = ScheduledTask;
 
 function ScheduledTask(delay, period, task, scheduler) {
 	this.time = delay;
@@ -417,20 +442,24 @@ ScheduledTask.prototype.dispose = function() {
 	return this.task.dispose();
 };
 
-function runTask(task) {
-	try {
-		return task.run();
-	} catch(e) {
-		return task.error(e);
-	}
-}
+},{}],5:[function(require,module,exports){
+/** @license MIT License (c) copyright 2010-2016 original author or authors */
+/** @author Brian Cavalier */
+/** @author John Hann */
 
-function Scheduler(timer) {
+var base = require('@most/prelude');
+var ScheduledTask = require('./ScheduledTask');
+var runTask = require('../task').runTask;
+var Timeline = require('./Timeline');
+
+module.exports = Scheduler;
+
+function Scheduler(timer, timeline) {
 	this.timer = timer;
+	this.timeline = timeline;
 
 	this._timer = null;
-	this._nextArrival = 0;
-	this._tasks = [];
+	this._nextArrival = Infinity;
 
 	var self = this;
 	this._runReadyTasksBound = function() {
@@ -458,37 +487,25 @@ Scheduler.prototype.schedule = function(delay, period, task) {
 	var now = this.now();
 	var st = new ScheduledTask(now + Math.max(0, delay), period, task, this);
 
-	insertByTime(st, this._tasks);
+	this.timeline.add(st);
 	this._scheduleNextRun(now);
 	return st;
 };
 
 Scheduler.prototype.cancel = function(task) {
 	task.active = false;
-	var i = binarySearch(task.time, this._tasks);
-
-	if(i >= 0 && i < this._tasks.length) {
-		var at = base.findIndex(task, this._tasks[i].events);
-		if(at >= 0) {
-			this._tasks[i].events.splice(at, 1);
-			this._reschedule();
-		}
+	if(this.timeline.remove(task)) {
+		this._reschedule();
 	}
 };
 
 Scheduler.prototype.cancelAll = function(f) {
-	for(var i=0; i<this._tasks.length; ++i) {
-		removeAllFrom(f, this._tasks[i]);
-	}
+	this.timeline.removeAll(f);
 	this._reschedule();
-};
-
-function removeAllFrom(f, timeslot) {
-	timeslot.events = base.removeAll(f, timeslot.events);
 }
 
 Scheduler.prototype._reschedule = function() {
-	if(this._tasks.length === 0) {
+	if(this.timeline.isEmpty()) {
 		this._unschedule();
 	} else {
 		this._scheduleNextRun(this.now());
@@ -501,11 +518,11 @@ Scheduler.prototype._unschedule = function() {
 };
 
 Scheduler.prototype._scheduleNextRun = function(now) {
-	if(this._tasks.length === 0) {
+	if(this.timeline.isEmpty()) {
 		return;
 	}
 
-	var nextArrival = this._tasks[0].time;
+	var nextArrival = this.timeline.nextArrival();
 
 	if(this._timer === null) {
 		this._scheduleNextArrival(nextArrival, now);
@@ -521,34 +538,75 @@ Scheduler.prototype._scheduleNextArrival = function(nextArrival, now) {
 	this._timer = this.timer.setTimer(this._runReadyTasksBound, delay);
 };
 
-
 Scheduler.prototype._runReadyTasks = function(now) {
 	this._timer = null;
-
-	this._tasks = this._findAndRunTasks(now);
-
+	this.timeline.runTasks(now, runTask)
 	this._scheduleNextRun(this.now());
 };
 
-Scheduler.prototype._findAndRunTasks = function(now) {
-	var tasks = this._tasks;
+},{"../task":8,"./ScheduledTask":4,"./Timeline":6,"@most/prelude":2}],6:[function(require,module,exports){
+/** @license MIT License (c) copyright 2010-2016 original author or authors */
+/** @author Brian Cavalier */
+/** @author John Hann */
+
+var base = require('@most/prelude');
+
+module.exports = Timeline;
+
+function Timeline() {
+	this.tasks = [];
+}
+
+Timeline.prototype.nextArrival = function() {
+	return this.isEmpty() ? Infinity : this.tasks[0].time;
+}
+
+Timeline.prototype.isEmpty = function() {
+	return this.tasks.length === 0;
+}
+
+Timeline.prototype.add = function(st) {
+	insertByTime(st, this.tasks);
+}
+
+Timeline.prototype.remove = function(st) {
+	var i = binarySearch(st.time, this.tasks);
+
+	if(i >= 0 && i < this.tasks.length) {
+		var at = base.findIndex(st, this.tasks[i].events);
+		if(at >= 0) {
+			this.tasks[i].events.splice(at, 1);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+Timeline.prototype.removeAll = function(f) {
+	for(var i = 0, l = this.tasks.length; i < l; ++i) {
+		removeAllFrom(f, this.tasks[i]);
+	}
+};
+
+Timeline.prototype.runTasks = function(t, runTask) {
+	var tasks = this.tasks;
 	var l = tasks.length;
 	var i = 0;
 
-	while(i < l && tasks[i].time <= now) {
+	while(i < l && tasks[i].time <= t) {
 		++i;
 	}
 
-	this._tasks = tasks.slice(i);
+	this.tasks = tasks.slice(i);
 
 	// Run all ready tasks
 	for (var j = 0; j < i; ++j) {
-		this._tasks = runTasks(tasks[j], this._tasks);
+		this.tasks = runTasks(runTask, tasks[j], this.tasks);
 	}
-	return this._tasks;
-};
+}
 
-function runTasks(timeslot, tasks) {
+function runTasks(runTask, timeslot, tasks) {
 	var events = timeslot.events;
 	for(var i=0; i<events.length; ++i) {
 		var task = events[i];
@@ -558,7 +616,7 @@ function runTasks(timeslot, tasks) {
 
 			// Reschedule periodic repeating tasks
 			// Check active again, since a task may have canceled itself
-			if(task.period >= 0) {
+			if(task.period >= 0 && task.active) {
 				task.time = task.time + task.period;
 				insertByTime(task, tasks);
 			}
@@ -587,6 +645,10 @@ function insertByTime(task, timeslots) {
 	}
 }
 
+function removeAllFrom(f, timeslot) {
+	timeslot.events = base.removeAll(f, timeslot.events);
+}
+
 function binarySearch(t, sortedArray) {
 	var lo = 0;
 	var hi = sortedArray.length;
@@ -611,180 +673,36 @@ function newTimeslot(t, events) {
 	return { time: t, events: events };
 }
 
-},{"@most/prelude":2}],5:[function(require,module,exports){
-(function (process){
+},{"@most/prelude":2}],7:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
 
 var Scheduler = require('./Scheduler');
-var setTimeoutTimer = require('./timeoutTimer');
-var nodeTimer = require('./nodeTimer');
+var ClockTimer = require('./ClockTimer');
+var Timeline = require('./Timeline');
 
-var isNode = typeof process === 'object'
-		&& typeof process.nextTick === 'function';
+module.exports = new Scheduler(new ClockTimer(), new Timeline());
 
-module.exports = new Scheduler(isNode ? nodeTimer : setTimeoutTimer);
-
-}).call(this,require('_process'))
-},{"./Scheduler":4,"./nodeTimer":6,"./timeoutTimer":7,"_process":8}],6:[function(require,module,exports){
+},{"./ClockTimer":3,"./Scheduler":5,"./Timeline":6}],8:[function(require,module,exports){
 /** @license MIT License (c) copyright 2010-2016 original author or authors */
 /** @author Brian Cavalier */
 /** @author John Hann */
 
-var defer = require('../defer');
+exports.defer = defer;
+exports.runTask = runTask;
 
-/*global setTimeout, clearTimeout*/
-
-function Task(f) {
-	this.f = f;
-	this.active = true;
+function defer(task) {
+	return Promise.resolve(task).then(runTask);
 }
 
-Task.prototype.run = function() {
-	if(!this.active) {
-		return;
+function runTask(task) {
+	try {
+		return task.run();
+	} catch(e) {
+		return task.error(e);
 	}
-	var f = this.f;
-	return f();
-};
-
-Task.prototype.error = function(e) {
-	throw e;
-};
-
-Task.prototype.cancel = function() {
-	this.active = false;
-};
-
-function runAsTask(f) {
-	var task = new Task(f);
-	defer(task);
-	return task;
 }
-
-module.exports = {
-	now: Date.now,
-	setTimer: function(f, dt) {
-		return dt <= 0 ? runAsTask(f) : setTimeout(f, dt);
-	},
-	clearTimer: function(t) {
-		return t instanceof Task ? t.cancel() : clearTimeout(t);
-	}
-};
-
-},{"../defer":3}],7:[function(require,module,exports){
-/** @license MIT License (c) copyright 2010-2016 original author or authors */
-/** @author Brian Cavalier */
-/** @author John Hann */
-
-/*global setTimeout, clearTimeout*/
-
-module.exports = {
-	now: Date.now,
-	setTimer: function(f, dt) {
-		return setTimeout(f, dt);
-	},
-	clearTimer: function(t) {
-		return clearTimeout(t);
-	}
-};
-
-},{}],8:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = setTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    clearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
 
 },{}]},{},[1])(1)
 });
