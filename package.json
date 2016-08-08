@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "description": "Circular Dependencies for most.js",
   "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "scripts": {
     "doc": "typedoc --excludeNotExported --out doc/ --module commonjs --target ES5 --name 'Most Proxy' src/index.ts",
     "postdoc": "git add doc/ && git commit -m 'chore(docs): build doc/'",
@@ -15,6 +16,7 @@
     "test-ci": "npm run lib && npm run lint && npm run test-node && testem ci",
     "dist": "rimraf dist/ && mkdirp dist && npm run lib && browserify lib/index.js -t babelify -t browserify-shim --standalone mostProxy --exclude most --outfile dist/most-proxy.js && uglifyjs dist/most-proxy.js -o dist/most-proxy.min.js",
     "postdist": "git add dist/ && git commit -m 'chore(dist): build dist/'",
+    "prelib": "typings install env~es2015-promise --global",
     "lib": "rimraf lib/ && mkdirp lib/ && tsc",
     "prepublish": "npm run lib",
     "prerelease": "npm run doc && npm run dist && npm run changelog",
@@ -62,6 +64,7 @@
     "ghooks": "^1.2.1",
     "mkdirp": "^0.5.1",
     "mocha": "^2.5.3",
+    "most": "^1.0.0",
     "power-assert": "^1.4.1",
     "rimraf": "^2.5.2",
     "testem": "^1.7.4",
@@ -73,6 +76,6 @@
     "validate-commit-msg": "^2.6.1"
   },
   "peerDependencies": {
-    "most": "^0.19.7"
+    "most": "^1.0.0"
   }
 }
