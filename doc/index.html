@@ -71,7 +71,7 @@
 				<pre><code class="lang-shell">$ npm install --save most-proxy
 </code></pre>
 				<h2 id="api-documentation">API Documentation</h2>
-				<p>Documentation can be found <a href="https://tylors.github.io/most-proxy/doc">here</a></p>
+				<p>Documentation can be found <a href="https://tylors.github.io/most-proxy/doc/index.html">here</a></p>
 				<h2 id="example">Example</h2>
 				<pre><code class="lang-js"><span class="hljs-keyword">import</span> {periodic} <span class="hljs-keyword">from</span> <span class="hljs-string">'most'</span>
 <span class="hljs-keyword">import</span> {proxy} <span class="hljs-keyword">from</span> <span class="hljs-string">'most-proxy'</span>
@@ -86,7 +86,7 @@ const {attach, stream} = proxy()
 stream.take(3).observe(x =&gt; console.log(x)) // 1, 2, 3
 
 // here we create the stream we want to use <span class="hljs-keyword">as</span> the circular dependency
-const original = periodic(100).scan((x, y) =&gt; x + y, 0)
+const original = periodic(100, 1).scan((x, y) =&gt; x + y, 0)
 
 // pipe events <span class="hljs-keyword">from</span> original to proxy stream
 attach(original)
