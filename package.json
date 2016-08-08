@@ -37,7 +37,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TylorS/most-proxy.git"
+    "url": "git+https://github.com/mostjs-community/most-proxy.git"
   },
   "keywords": [
     "most.js",
@@ -47,9 +47,9 @@
   "author": "Tylor Steinberger <tlsteinberger167@gmail.com> (github.com/TylorS)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TylorS/most-proxy/issues"
+    "url": "https://github.com/mostjs-community/most-proxy/issues"
   },
-  "homepage": "https://github.com/TylorS/most-proxy#readme",
+  "homepage": "https://github.com/mostjs-community/most-proxy#readme",
   "devDependencies": {
     "babel-plugin-espower": "^2.1.2",
     "babel-preset-es2015": "^6.9.0",
