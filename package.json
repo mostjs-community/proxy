@@ -15,6 +15,7 @@
     "test-ci": "npm run lib && npm run lint && npm run test-node && testem ci",
     "dist": "rimraf dist/ && mkdirp dist && npm run lib && browserify lib/index.js -t babelify -t browserify-shim --standalone mostProxy --exclude most --outfile dist/most-proxy.js && uglifyjs dist/most-proxy.js -o dist/most-proxy.min.js",
     "postdist": "git add dist/ && git commit -m 'chore(dist): build dist/'",
+    "prelib": "typings install env~es2015-promise --global",
     "lib": "rimraf lib/ && mkdirp lib/ && tsc",
     "prepublish": "npm run lib",
     "prerelease": "npm run doc && npm run dist && npm run changelog",
