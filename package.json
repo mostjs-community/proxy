@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "scripts": {
-    "doc": "typedoc --excludeNotExported --out doc/ --module commonjs --target ES5 --name 'Most Proxy' src/index.ts",
+    "doc": "typedoc --excludeNotExported --out doc/ --module commonjs --target ES5 --name 'Most Proxy' typings/index.d.ts src/index.ts",
     "postdoc": "git add doc/ && git commit -m 'chore(docs): build doc/'",
     "changelog": "conventional-changelog --infile CHANGELOG.md --same-file --release-count 0 --preset angular",
     "commit": "git-cz",
