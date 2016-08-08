@@ -1,6 +1,6 @@
 {
   "name": "most-proxy",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Circular Dependencies for most.js",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
