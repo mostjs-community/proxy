@@ -3,6 +3,7 @@
   "version": "3.0.0",
   "description": "Circular Dependencies for most.js",
   "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "scripts": {
     "doc": "typedoc --excludeNotExported --out doc/ --module commonjs --target ES5 --name 'Most Proxy' src/index.ts",
     "postdoc": "git add doc/ && git commit -m 'chore(docs): build doc/'",
