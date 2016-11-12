@@ -1,3 +1,23 @@
+<a name="3.2.0"></a>
+# [3.2.0](https://github.com/mostjs-community/most-proxy/compare/v3.1.1...v3.2.0) (2016-11-12)
+
+
+### Bug Fixes
+
+* **proxy:** fix proxy emitting after disposed ([8871344](https://github.com/mostjs-community/most-proxy/commit/8871344)), closes [#4](https://github.com/mostjs-community/most-proxy/issues/4)
+
+
+
+<a name="3.1.1"></a>
+## [3.1.1](https://github.com/mostjs-community/most-proxy/compare/v3.1.0...v3.1.1) (2016-08-08)
+
+
+### Bug Fixes
+
+* **README:** Fix documentation URL to point to mostjs-community ([6c08b06](https://github.com/mostjs-community/most-proxy/commit/6c08b06))
+
+
+
 <a name="3.1.0"></a>
 # [3.1.0](https://github.com/mostjs-community/most-proxy/compare/v3.0.0...v3.1.0) (2016-08-08)
 
