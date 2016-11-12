@@ -1,25 +1,24 @@
 # Most Proxy
 
-Simple way to create circular dependencies without the use of subjects.
+Create circular stream dependencies that is declarative and designed to avoid
+memory leaks.
+
+This codebase is proudly written in TypeScript so you can enjoy beautiful typings.
 
 ## Install
 ```shell
-$ npm install --save most-proxy
+npm install --save most-proxy
 ```
-
-## API Documentation
-
-Documentation can be found [here](https://mostjs-community.github.io/most-proxy/doc/index.html)
 
 ## Example
 
 ```js
-import {periodic} from 'most'
-import {proxy} from 'most-proxy'
+import { periodic } from 'most'
+import { proxy } from 'most-proxy'
 
 // create a proxy
 // returns *attach* to attach proxy to another stream, and a proxy stream *stream*
-const {attach, stream} = proxy()
+const { attach, stream } = proxy()
 
 // observe the proxy, taking only three events
 // proxy is a real most.Stream
@@ -31,4 +30,14 @@ const original = periodic(100, 1).scan((x, y) => x + y, 0)
 
 // pipe events from original to proxy stream
 attach(original)
+```
+
+## API Documentation
+
+```TypeScript
+interface Proxy<T> {
+  attach(stream: Stream<T>): Stream<T>;
+
+  stream: Stream<T>;
+}
 ```
