@@ -2,24 +2,22 @@
   "compilerOptions": {
     "declaration": true,
     "moduleResolution": "node",
-    "module": "es2015",
-    "target": "es2015",
+    "module": "commonjs",
+    "target": "es5",
     "lib": [
-      "dom",
-      "es5",
       "es2015"
     ],
     "noImplicitAny": true,
     "sourceMap": true,
     "noUnusedParameters": true,
-    "noUnusedLocals": true,
     "strictNullChecks": true,
     "types": [
+      "mocha",
       "node"
     ],
-    "outDir": "lib/es2015"
+    "outDir": "lib"
   },
-  "files": [
-    "src/index.ts"
+  "include": [
+    "./**/*.ts"
   ]
 }

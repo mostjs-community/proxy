@@ -2,8 +2,8 @@
   "compilerOptions": {
     "declaration": true,
     "moduleResolution": "node",
-    "module": "es2015",
-    "target": "es2015",
+    "module": "commonjs",
+    "target": "es5",
     "lib": [
       "dom",
       "es5",
@@ -17,7 +17,7 @@
     "types": [
       "node"
     ],
-    "outDir": "lib/es2015"
+    "outDir": "lib/commonjs"
   },
   "files": [
     "src/index.ts"
