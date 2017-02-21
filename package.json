@@ -3,6 +3,7 @@
   "version": "3.2.0",
   "description": "Circular Dependencies for most.js",
   "main": "lib/commonjs/index.js",
+  "module": "lib/es2015/index.js",
   "jsnext:main": "lib/es2015/index.js",
   "typings": "lib/es2015/index.d.ts",
   "scripts": {
