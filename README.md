@@ -5,6 +5,10 @@ memory leaks.
 
 This codebase is proudly written in TypeScript so you can enjoy beautiful typings.
 
+## Compatibility
+
+This library is compatible with `cujojs/most` v1.x. For `@most/core` support this library has been merged with [`most-subject`](https://github.com/mostjs-community/subject).
+
 ## Install
 ```shell
 npm install --save most-proxy
